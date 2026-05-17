@@ -1,6 +1,6 @@
 # App Sync Monitor
 
-**Magisk module for GammaOS** — Automatically sync emulator saves between your device and Syncthing.
+**Magisk module for GammaOS** - Automatically sync emulator saves between your device and Syncthing.
 
 ## The Problem (Simple Explanation)
 
