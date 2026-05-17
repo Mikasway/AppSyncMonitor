@@ -1,0 +1,6 @@
+id=app_sync_monitor
+name=App Sync Monitor
+version=1.0
+versionCode=1
+author=Community
+description=Automatically sync app data (saves, states, configs) on app launch and closure. Perfect for emulators using Syncthing. Monitor changes in real-time without manual intervention.
