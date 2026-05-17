@@ -1,151 +1,196 @@
 # App Sync Monitor
 
-Automatic data synchronization module for Android emulators and gaming apps using Syncthing.
+**Magisk module for GammaOS** — Automatically sync emulator saves between your device and Syncthing.
 
-## Features
+## The Problem (Simple Explanation)
 
-✅ **Automatic Sync on Launch** - Loads data from Syncthing folder when app starts
-✅ **Automatic Sync on Close** - Saves data back to Syncthing when app closes
-✅ **Battery Efficient** - Checks every 10 seconds with minimal overhead
-✅ **Multi-App Support** - Monitor multiple emulators simultaneously
-✅ **Zero Manual Intervention** - Works transparently in the background
+You use **Syncthing** to backup your game saves to your PC.
+You use **NetherSX2** or **Dolphin** emulators on your phone.
 
-## Supported Apps
+**But on Android 14+, they don't talk to each other automatically.** You have to manually copy files back and forth. Annoying!
 
-- **NetherSX2 / AetherSX2** - PlayStation 2 emulator
-- **Dolphin** - GameCube/Wii emulator
-- *Easily customizable for other apps*
+**App Sync Monitor fixes this.** It's like a bridge that moves your saves automatically.
 
-## Requirements
+## What Happens (Step by Step)
 
-- GammaOS (or any Android with Magisk)
-- Syncthing-Fork installed and configured
-- Root access via Magisk
+### Before (Without this module)
+1. You play a game, save it
+2. You close the app
+3. The save is stuck on your phone
+4. Your PC doesn't get the update ❌
 
-## Installation
+### After (With this module)
+1. You play a game, save it
+2. You close the app
+3. **Module automatically copies the save to Syncthing**
+4. **Syncthing syncs to your PC** ✅
+5. Next time you play on another device, **your save is there** ✅
 
-### Step 1: Prepare Sync Scripts
+## How to Install
 
-Create the sync load script at `/data/media/0/sync_load.sh`:
+### Step 1: Get the Scripts Ready (Copy-Paste)
+
+**Open ADB on your PC and go into your phone's shell:**
+
+```
+adb shell
+su
+```
+
+**Create the first script** (copy everything between the `cat` and `EOF`):
 
 ```bash
+cat > /data/media/0/sync_load.sh << 'EOF'
 #!/bin/sh
-# Load from Syncthing to app storage
 cp -r /data/media/0/Syncthing/Android/data/xyz.aethersx2.android/files/. /data/media/0/Android/data/xyz.aethersx2.android/files/
 chown -R u0_a190:ext_data_rw /data/media/0/Android/data/xyz.aethersx2.android/files/
-
 cp -r /data/media/0/Syncthing/Android/data/org.dolphinemu.dolphinemu/files/. /data/media/0/Android/data/org.dolphinemu.dolphinemu/files/
 chown -R u0_a181:ext_data_rw /data/media/0/Android/data/org.dolphinemu.dolphinemu/files/
+EOF
+chmod +x /data/media/0/sync_load.sh
 ```
 
-Create the sync save script at `/data/media/0/sync_save.sh`:
+**Create the second script:**
 
 ```bash
+cat > /data/media/0/sync_save.sh << 'EOF'
 #!/bin/sh
-# Save from app storage back to Syncthing
 cp -r /data/media/0/Android/data/xyz.aethersx2.android/files/. /data/media/0/Syncthing/Android/data/xyz.aethersx2.android/files/
 cp -r /data/media/0/Android/data/org.dolphinemu.dolphinemu/files/. /data/media/0/Syncthing/Android/data/org.dolphinemu.dolphinemu/files/
-```
-
-Make both scripts executable:
-```bash
-chmod +x /data/media/0/sync_load.sh
+EOF
 chmod +x /data/media/0/sync_save.sh
 ```
 
-### Step 2: Install Module via Magisk Manager
+**What these scripts do:**
+- `sync_load.sh` = Copies saves FROM Syncthing TO the emulator (when you open the app)
+- `sync_save.sh` = Copies saves FROM the emulator TO Syncthing (when you close the app)
 
-1. Open Magisk Manager
-2. Modules → Install from storage
-3. Select the `AppSyncMonitor.zip` file
-4. Reboot device
+**What's `u0_a190` and `u0_a181`?**
+- `u0_a190` = Unique ID number for NetherSX2 app
+- `u0_a181` = Unique ID number for Dolphin app
+- Every app has its own number so Android knows which app is which
 
-### Step 3: Configure Syncthing-Fork
+**What's `ext_data_rw`?**
+- It means: "Give permission to read AND write files"
+- Without this, the app couldn't save your game
 
-1. In Syncthing-Fork, add folders for each app:
-   - **NetherSX2**: `~/Android/data/xyz.aethersx2.android/files`
-   - **Dolphin**: `~/Android/data/org.dolphinemu.dolphinemu/files`
+**Simple translation:**
+`chown -R u0_a181:ext_data_rw /data/media/0/Android/data/org.dolphinemu.dolphinemu/files/`
 
-2. Set up bidirectional sync with your PC/Linux
+= "Give Dolphin permission to read and write its save files"
 
-## How It Works
+### Step 2: Install the Module
 
-1. **Launch Detection** - Module monitors foreground app via `dumpsys`
-2. **Load Trigger** - When you open NetherSX2/Dolphin, `sync_load.sh` runs
-   - Copies latest saves from Syncthing folder to app storage
-   - Sets correct permissions so app can read files
-3. **Gameplay** - App uses local files normally
-4. **Save Trigger** - When you close the app, `sync_save.sh` runs
-   - Copies updated saves back to Syncthing folder
-   - Syncthing auto-syncs to your other devices
+1. Download the `AppSyncMonitor.zip` file
+2. Open **Magisk Manager**
+3. Tap **Modules** (bottom menu)
+4. Tap the **+** button
+5. Select `AppSyncMonitor.zip`
+6. Wait for it to say "Success"
+7. **Reboot your phone**
 
-## Customization
+That's it! The module is now installed and running.
 
-### Add More Apps
+### Step 3: Configure Syncthing
 
-Edit `/data/adb/modules/AppSyncMonitor/service.sh` and add:
+Open **Syncthing-Fork** app and make sure you have two folders syncing:
 
-```bash
-YOUR_PKG="com.example.app"
-YOUR_UID=u0_aXXX  # Find with: dumpsys package | grep userId
+1. **Folder 1 - NetherSX2 saves**
+   - Device folder: `~/Android/data/xyz.aethersx2.android/files`
+   - Syncs to: Your PC/Linux
 
-# In the loop, add:
-if [ "$FOREGROUND" = "$YOUR_PKG" ] && [ $YOUR_RUNNING -eq 0 ]; then
-    YOUR_RUNNING=1
-    "$SYNC_LOAD_SCRIPT" > /dev/null 2>&1 &
-elif [ "$FOREGROUND" != "$YOUR_PKG" ] && [ $YOUR_RUNNING -eq 1 ]; then
-    YOUR_RUNNING=0
-    "$SYNC_SAVE_SCRIPT" > /dev/null 2>&1 &
-fi
+2. **Folder 2 - Dolphin saves**
+   - Device folder: `~/Android/data/org.dolphinemu.dolphinemu/files`
+   - Syncs to: Your PC/Linux
+
+(If you don't know how to set this up, see the separate Syncthing guide)
+
+## How It Works (In Your Phone)
+
+The module runs in the background and watches what apps you're using:
+
+**When you launch NetherSX2:**
+```
+You tap NetherSX2 icon
+    ↓
+Module detects the launch
+    ↓
+Runs sync_load.sh
+    ↓
+Latest saves from Syncthing are copied to the emulator
+    ↓
+You can play!
 ```
 
-### Finding App UIDs
-
-```bash
-adb shell stat /data/media/0/Android/data/com.example.app
+**When you close NetherSX2:**
+```
+You close the app
+    ↓
+Module detects the closure
+    ↓
+Runs sync_save.sh
+    ↓
+Your saves are copied back to Syncthing
+    ↓
+Syncthing syncs to your PC
 ```
 
-Look for `Uid: (XXXXX/ u0_aXXX)`
+## What Those Technical Terms Mean
+
+- **`chown u0_a190:ext_data_rw`** = "Give the NetherSX2 app permission to read/write these files"
+  - `u0_a190` = The app's user ID (unique number for the app)
+  - `ext_data_rw` = The group that has read/write access
+
+- **`cp -r`** = Copy a folder and everything inside it
+
+- **`~/Android/data/`** = Where Android stores app data on your phone
+
+- **`Syncthing folder`** = The folder where Syncthing keeps your backup copies
 
 ## Troubleshooting
 
-### Scripts not running?
-- Check if `/data/media/0/sync_load.sh` and `/data/media/0/sync_save.sh` exist
-- Verify scripts are executable: `ls -l /data/media/0/sync_*.sh`
-- Check Magisk logs: `adb logcat | grep AppSyncMonitor`
+### "Module not working, saves aren't syncing"
 
-### Permission denied errors?
-- Verify UIDs match your apps: `dumpsys package | grep userId`
-- Update UID values in sync scripts
+**Check 1: Are the scripts there?**
+```bash
+adb shell ls -l /data/media/0/sync_*.sh
+```
+You should see two files. If not, repeat Step 1.
 
-### Files not syncing?
-- Ensure Syncthing-Fork is running and configured
-- Check Syncthing status in its UI
-- Verify folder paths exist
+**Check 2: Is Syncthing running?**
+Open Syncthing app and check if it says "Running". If not, start it.
 
-## Performance Impact
+**Check 3: Are your folders configured in Syncthing?**
+In Syncthing app, go to Folders and check if NetherSX2 and Dolphin folders are listed.
 
-- **CPU**: Minimal - just checks foreground app every 10 seconds
-- **Battery**: ~0.5% extra drain (negligible)
-- **Storage**: No overhead, just copies existing files
-- **Network**: Only when Syncthing syncs (independent of this module)
+### "Permission denied errors"
+
+This usually means the app IDs are wrong. To find your correct app IDs:
+
+```bash
+adb shell stat /data/media/0/Android/data/xyz.aethersx2.android
+```
+
+Look for the line with `Uid:` - it shows something like `u0_a190`. Use that number in your scripts.
+
+## Performance (Will it drain my battery?)
+
+**No, it's very efficient:**
+- The module only checks every 10 seconds if an app is launched/closed
+- That's like checking your watch 6 times per minute
+- Battery impact: almost nothing
+- CPU impact: negligible
 
 ## Compatibility
 
-- **Android**: 11+ (tested on Android 14)
-- **Devices**: Any device with Magisk
-- **ROMs**: GammaOS, LineageOS, GrapheneOS, Stock Android + custom ROM
+- **Works on**: GammaOS with Magisk
+- **Android version**: 11+
+- **Other ROMs**: LineageOS, GrapheneOS, and most custom ROMs with Magisk
 
 ## License
 
-MIT - Feel free to modify and share
+MIT - Use freely, modify as you wish
 
-## Contributing
+## Need Help?
 
-Found a bug? Have suggestions? Open an issue or PR:
-- Discord: [GammaOS Community]
-- GitHub: [Submit issue]
-
-## Credits
-
-Created for the GammaOS community with ❤️
+Open an issue on GitHub: https://github.com/Mikasway/AppSyncMonitor/issues
